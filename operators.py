@@ -134,9 +134,7 @@ class Planner(object):
                 if graph is not None:
                     graph.add_node(q.state.copy())
                     # Look it up in the graph even though we just inserted it, so that we have reference to the copy in the graph
-                    import pdb
                     n = graph.node[q.state]
-                    pdb.set_trace()
                     if not n.has_visit_marker():
                         n.set_visit_marker("{steps}".format(steps=self.steps))
 
