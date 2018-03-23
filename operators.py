@@ -1,6 +1,8 @@
 import copy
 import json
+import logging
 
+log = logging.getLogger(__name__)
 
 class State(object):
     def filter_control_fields(self, target=None):
@@ -25,11 +27,12 @@ class State(object):
         self.__dict__[key] = value
 
     def __repr__(self):
-        return str(self)
+        return repr(self.__dict__)
 
     def __str__(self):
         try:
-            return str(json.dumps(self.filter_control_fields(), sort_keys=True))
+            result = str(json.dumps(self.filter_control_fields(), sort_keys=True))
+            return result
         except TypeError:
             return str(self.__dict__)
 
@@ -123,6 +126,7 @@ class Planner(object):
     def plan(self, graph=None):
         self.steps = 0
         queue = [self]
+        seen_states = set()
         graph.add_node(self.state)
 
         while len(queue):
@@ -130,13 +134,12 @@ class Planner(object):
 
             for q in queue:
                 self.steps = self.steps + 1
+                seen_states.add(q.state)
 
                 if graph is not None:
-                    graph.add_node(q.state.copy())
-                    # Look it up in the graph even though we just inserted it, so that we have reference to the copy in the graph
-                    n = graph.node[q.state]
-                    if not n.has_visit_marker():
-                        n.set_visit_marker("{steps}".format(steps=self.steps))
+                    graph.add_node(q.state)
+                    # if not q.state.has_visit_marker():
+                        #q.state.set_visit_marker("{steps}".format(steps=self.steps))
 
                 if self.endState == q.state:
                     return q
@@ -161,9 +164,9 @@ class Helpers(object):
     @staticmethod
     def write_dot(graph, output):
         import networkx
-        copied_graph = graph.copy()
         relabel_assignments = {}
-        for node in copied_graph.nodes():
-            relabel_assignments[node] = '"{label}"'.format(label=str(node))
-        copied_graph = networkx.relabel_nodes(copied_graph, relabel_assignments)
+        for node in graph.nodes():
+            relabel_assignments[node] = '"{label}"'.format(label=str(node).replace('"', '\\"'))
+            log.debug("{before} becomes {after}".format(before=node, after=relabel_assignments[node]))
+        copied_graph = networkx.relabel_nodes(graph, relabel_assignments, copy=True)
         networkx.drawing.nx_pydot.write_dot(copied_graph, output)

@@ -1,8 +1,10 @@
+import logging
 import networkx as nx
 import unittest
 
 from operators import EndState, Helpers, Operator, Planner, PrimitiveOperator, State
 
+logging.basicConfig(level=logging.DEBUG)
 
 class StateTests(unittest.TestCase):
     def test_equals_empty_states(self):
@@ -55,6 +57,11 @@ class StateTests(unittest.TestCase):
         print(s1.__dict__)
         self.assertFalse(s1.is_frozen())
         self.assertEqual(s0, s1)
+
+    def test_str(self):
+        s0 = State()
+        s0.attribute = 123
+        self.assertEqual(str(s0), "{\"attribute\": 123}")
 
 
 class OperatorTests(unittest.TestCase):
