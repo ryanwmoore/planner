@@ -32,7 +32,11 @@ class State(object):
     def __str__(self):
         try:
             result = str(json.dumps(self.filter_control_fields(), sort_keys=True))
-            return result
+            if self.has_visit_marker():
+                return "{marker}: {result}".format(marker=self.get_visit_marker(), result=result)
+            else:
+                return result
+
         except TypeError:
             return str(self.__dict__)
 
@@ -133,13 +137,14 @@ class Planner(object):
             newQueueStates = []
 
             for q in queue:
-                self.steps = self.steps + 1
-                seen_states.add(q.state)
+                if q.state not in seen_states:
+                    self.steps = self.steps + 1
+                    q.state.set_visit_marker("Step {steps}".format(steps=self.steps))
+                    seen_states.add(q.state)
+
 
                 if graph is not None:
                     graph.add_node(q.state)
-                    # if not q.state.has_visit_marker():
-                        #q.state.set_visit_marker("{steps}".format(steps=self.steps))
 
                 if self.endState == q.state:
                     return q
@@ -147,12 +152,8 @@ class Planner(object):
                 for new_planner in q._apply(newQueueStates, self.description):
                     newQueueStates.append(new_planner)
                     if graph is not None:
-                        source_state = copy.deepcopy(q.state)
-                        source_state.freeze()
-                        dest_state = copy.deepcopy(new_planner.state)
-                        dest_state.freeze()
                         action = new_planner.description[-1]
-                        graph.add_edge(source_state, dest_state, label=action)
+                        graph.add_edge(q.state, new_planner.state, label=action)
 
             queue.clear()
             for q in newQueueStates:

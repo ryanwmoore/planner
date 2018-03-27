@@ -4,7 +4,7 @@ import unittest
 
 from operators import EndState, Helpers, Operator, Planner, PrimitiveOperator, State
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 class StateTests(unittest.TestCase):
     def test_equals_empty_states(self):
@@ -62,6 +62,15 @@ class StateTests(unittest.TestCase):
         s0 = State()
         s0.attribute = 123
         self.assertEqual(str(s0), "{\"attribute\": 123}")
+
+    def test_visit_marker(self):
+        suj = State()
+        suj.attribute = 'some-value'
+        self.assertFalse(suj.has_visit_marker())
+        self.assertEqual(str(suj), '{"attribute": "some-value"}')
+        suj.set_visit_marker("prefix")
+        self.assertTrue(suj.has_visit_marker())
+        self.assertEqual(str(suj), 'prefix: {"attribute": "some-value"}')
 
 
 class OperatorTests(unittest.TestCase):
