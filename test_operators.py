@@ -2,7 +2,7 @@ import logging
 import networkx as nx
 import unittest
 
-from operators import EndState, Helpers, Operator, Planner, PrimitiveOperator, State
+from operators import *
 
 logging.basicConfig(level=logging.INFO)
 
@@ -72,6 +72,25 @@ class StateTests(unittest.TestCase):
         self.assertTrue(suj.has_visit_marker())
         self.assertEqual(str(suj), 'prefix: {"attribute": "some-value"}')
 
+class BreadthFirstSearchStrategyTests(unittest.TestCase):
+    def smoke_test(self):
+        suj = BreadthFirstSearchStrategy()
+        suj.addState(1)
+        suj.addState(2)
+        suj.addState(3)
+        self.assertEqual(1, suj.popNextState())
+        self.assertEqual(2, suj.popNextState())
+        self.assertEqual(3, suj.popNextState())
+
+class DepthFirstSearchStrategyTests(unittest.TestCase):
+    def smoke_test(self):
+        suj = DepthFirstSearchStrategy()
+        suj.addState(1)
+        suj.addState(2)
+        suj.addState(3)
+        self.assertEqual(3, suj.popNextState())
+        self.assertEqual(2, suj.popNextState())
+        self.assertEqual(1, suj.popNextState())
 
 class OperatorTests(unittest.TestCase):
     def test_can_apply_throws_NotImplementedError(self):
@@ -85,19 +104,19 @@ class OperatorTests(unittest.TestCase):
 
 class PlannerTest(unittest.TestCase):
     def test_it_verifies_state_is_valid(self):
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(TypeError) as context:
             Planner("foo", [], EndState())
 
         self.assertTrue('Not a valid State' in str(context.exception))
 
     def test_it_verifies_operators_are_valid(self):
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(TypeError) as context:
             Planner(State(), ["foo"], EndState())
 
         self.assertTrue('Not all Operators are valid' in str(context.exception))
 
     def test_it_verifies_endstate_is_valid(self):
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(TypeError) as context:
             Planner(State(), [Operator()], "invalid-end-state")
 
         self.assertTrue('Not a valid EndState' in str(context.exception))

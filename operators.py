@@ -91,18 +91,48 @@ class CompoundOperator(Operator):
     pass
 
 
+class SearchStrategy(object):
+    def addState(self, state):
+        raise NotImplementedError("this is an abstract base class: Use one of the classes that inherit from this one")
+
+    def popNextState(self, state):
+        raise NotImplementedError("this is an abstract base class: Use one of the classes that inherit from this one")
+
+
+class BreadthFirstSearchStrategy(SearchStrategy):
+    def __init__(self):
+        self.queue = []
+
+    def addState(self, state):
+        self.queue.append(state)
+
+    def popNextState(self, state):
+        return self.queue.pop(0)
+
+
+class DepthFirstSearchStrategy(SearchStrategy):
+    def __init__(self):
+        self.stack = []
+
+    def addState(self, state):
+        self.stack.append(state)
+
+    def popNextState(self, state):
+        return self.stack.pop()
+
+
 class Planner(object):
     def __init__(self, state, operators, endState, description=[]):
         if not isinstance(state, State):
-            raise ValueError("Not a valid State: {state}".format(state=state))
+            raise TypeError("Not a valid State: {state}".format(state=state))
         self.state = state
 
         if not all(isinstance(o, Operator) for o in operators):
-            raise ValueError("Not all Operators are valid: {operators}".format(operators=operators))
+            raise TypeError("Not all Operators are valid: {operators}".format(operators=operators))
         self.operators = list(operators)
 
         if not isinstance(endState, EndState):
-            raise ValueError("Not a valid EndState: {endState}".format(endState=endState))
+            raise TypeError("Not a valid EndState: {endState}".format(endState=endState))
         self.endState = endState
 
         self.description = description
