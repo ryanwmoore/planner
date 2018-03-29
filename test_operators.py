@@ -6,57 +6,57 @@ from operators import *
 
 logging.basicConfig(level=logging.INFO)
 
+
 class StateTests(unittest.TestCase):
     def test_equals_empty_states(self):
-        s0 = State()
-        s1 = State()
-        self.assertEqual(s0, s1)
+        suj = State()
+        other = State()
+        self.assertEqual(suj, other)
 
     def test_equals_attribute_set(self):
-        s0 = State()
-        s0.some_attribute = 'some_value'
-        s1 = State()
-        s1.some_attribute = 'some_value'
-        self.assertEqual(s0, s1)
+        suj = State()
+        suj.some_attribute = 'some_value'
+        other = State()
+        other.some_attribute = 'some_value'
+        self.assertEqual(suj, other)
 
     def test_notequals(self):
-        s0 = State()
-        s0.some_attribute = 'some_value'
-        s1 = State()
-        s1.some_attribute = 'some_other_value'
-        self.assertNotEqual(s0, s1)
+        suj = State()
+        suj.some_attribute = 'some_value'
+        other = State()
+        other.some_attribute = 'some_other_value'
+        self.assertNotEqual(suj, other)
 
     def test_freezing_manual(self):
-        s1 = State()
-        s1.freeze()
-        original_hash = s1.__hash__()
+        suj = State()
+        suj.freeze()
+        original_hash = suj.__hash__()
         with self.assertRaises(AttributeError):
-            s1.field = 'value'
-        s1.set_visit_marker('this value can be set after freezing')
-        self.assertEqual(s1.get_visit_marker(), 'this value can be set after freezing')
-        post_seg_visit_marker_hash = s1.__hash__()
+            suj.field = 'value'
+        suj.set_visit_marker('this value can be set after freezing')
+        self.assertEqual(suj.get_visit_marker(), 'this value can be set after freezing')
+        post_seg_visit_marker_hash = suj.__hash__()
 
         self.assertEqual(original_hash, post_seg_visit_marker_hash)
         # Although now frozen, it's equivalent to its original value
-        self.assertEqual(s1, State())
+        self.assertEqual(suj, State())
 
     def test_freezing_automatic(self):
-        s0 = State()
+        suj = State()
         # Hashed state becomes automatically frozen
         container = dict()
-        container[s0] = 'any-value'
-        self.assertTrue(s0.is_frozen())
+        container[suj] = 'any-value'
+        self.assertTrue(suj.is_frozen())
         self.assertTrue(list(container.keys())[0].is_frozen())
 
     def test_copy(self):
-        s0 = State()
-        s0.attribute = 'some-value'
-        s0.freeze()
-        self.assertTrue(s0.is_frozen())
-        s1 = s0.copy()
-        print(s1.__dict__)
-        self.assertFalse(s1.is_frozen())
-        self.assertEqual(s0, s1)
+        suj = State()
+        suj.attribute = 'some-value'
+        suj.freeze()
+        self.assertTrue(suj.is_frozen())
+        other = suj.copy()
+        self.assertFalse(other.is_frozen())
+        self.assertEqual(suj, other)
 
     def test_str(self):
         s0 = State()
@@ -72,6 +72,7 @@ class StateTests(unittest.TestCase):
         self.assertTrue(suj.has_visit_marker())
         self.assertEqual(str(suj), 'prefix: {"attribute": "some-value"}')
 
+
 class BreadthFirstSearchStrategyTests(unittest.TestCase):
     def smoke_test(self):
         suj = BreadthFirstSearchStrategy()
@@ -82,6 +83,7 @@ class BreadthFirstSearchStrategyTests(unittest.TestCase):
         self.assertEqual(2, suj.popNextState())
         self.assertEqual(3, suj.popNextState())
 
+
 class DepthFirstSearchStrategyTests(unittest.TestCase):
     def smoke_test(self):
         suj = DepthFirstSearchStrategy()
@@ -91,6 +93,7 @@ class DepthFirstSearchStrategyTests(unittest.TestCase):
         self.assertEqual(3, suj.popNextState())
         self.assertEqual(2, suj.popNextState())
         self.assertEqual(1, suj.popNextState())
+
 
 class OperatorTests(unittest.TestCase):
     def test_can_apply_throws_NotImplementedError(self):
@@ -165,7 +168,10 @@ class PlannerTest(unittest.TestCase):
                 if len(contents) == 0:
                     return visit_str + "in {location}".format(location=self.location['actor'])
                 else:
-                    return visit_str + "in {location} with {contents}".format(location=self.location['actor'], contents=', '.join(sorted(list(self.contents['actor']))))
+                    return visit_str + "in {location} with {contents}".format(
+                        location=self.location['actor'],
+                        contents=', '.join(sorted(list(self.contents['actor'])))
+                    )
 
         state = StateWithSuccinctPrint()
         state.connections = (
@@ -175,7 +181,12 @@ class PlannerTest(unittest.TestCase):
             ('kitchen', 'stairs'),
             ('garage', 'street'),
             ('street', 'park'))
-        state.contents = dict(livingroom=['frisbee'], actor=[], kitchen=['spoon'], garage=['bicycle'])
+        state.contents = dict(
+            actor=[],
+            garage=['bicycle'],
+            kitchen=['spoon'],
+            livingroom=['frisbee']
+        )
         state.location = dict(actor='bedroom')
 
         class GrabAvailableItem(PrimitiveOperator):
@@ -187,7 +198,9 @@ class PlannerTest(unittest.TestCase):
                 for item in state.contents[actor_location]:
                     new_state = state.copy()
                     new_state.contents['actor'].append(item)
-                    new_state.contents[actor_location].pop(new_state.contents[actor_location].index(item))
+                    new_state.contents[actor_location].pop(
+                        new_state.contents[actor_location].index(item)
+                    )
                     yield new_state, "grab {item}".format(item=item)
 
         class WalkToNewLocation(PrimitiveOperator):
