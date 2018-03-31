@@ -1,3 +1,4 @@
+import collections
 import logging
 import networkx as nx
 import unittest
@@ -49,6 +50,16 @@ class StateTests(unittest.TestCase):
         self.assertTrue(suj.is_frozen())
         self.assertTrue(list(container.keys())[0].is_frozen())
 
+    def test_is_hashable(self):
+        self.assertTrue(State._is_hashable(1))
+        self.assertTrue(State._is_hashable("strings"))
+        self.assertTrue(State._is_hashable((1, 2)))
+        self.assertTrue(State._is_hashable(frozenset([1, 2])))
+
+        self.assertFalse(State._is_hashable([1, 2, 3]))
+        self.assertFalse(State._is_hashable(set([1, 2, 3])))
+        self.assertFalse(State._is_hashable(dict(abc=123)))
+
     def test_copy(self):
         suj = State()
         suj.attribute = 'some-value'
@@ -68,9 +79,13 @@ class StateTests(unittest.TestCase):
         suj.attribute = 'some-value'
         self.assertFalse(suj.has_visit_marker())
         self.assertEqual(str(suj), '{"attribute": "some-value"}')
+        original_hash = suj.__hash__()
+        original_copy = copy.deepcopy(suj)
         suj.set_visit_marker("prefix")
         self.assertTrue(suj.has_visit_marker())
         self.assertEqual(str(suj), 'prefix: {"attribute": "some-value"}')
+        self.assertEqual(original_hash, suj.__hash__())
+        self.assertEqual(original_copy, suj)
 
 
 class BreadthFirstSearchStrategyTests(unittest.TestCase):
@@ -108,21 +123,27 @@ class OperatorTests(unittest.TestCase):
 class PlannerTest(unittest.TestCase):
     def test_it_verifies_state_is_valid(self):
         with self.assertRaises(TypeError) as context:
-            Planner("foo", [], EndState())
+            Planner("foo", [], EndState(), BreadthFirstSearchStrategy())
 
         self.assertTrue('Not a valid State' in str(context.exception))
 
     def test_it_verifies_operators_are_valid(self):
         with self.assertRaises(TypeError) as context:
-            Planner(State(), ["foo"], EndState())
+            Planner(State(), ["foo"], EndState(), BreadthFirstSearchStrategy())
 
-        self.assertTrue('Not all Operators are valid' in str(context.exception))
+        self.assertTrue('Not all Operators are valid' in str(context.exception), str(context.exception))
 
     def test_it_verifies_endstate_is_valid(self):
         with self.assertRaises(TypeError) as context:
-            Planner(State(), [Operator()], "invalid-end-state")
+            Planner(State(), [Operator()], "invalid-end-state", BreadthFirstSearchStrategy())
 
         self.assertTrue('Not a valid EndState' in str(context.exception))
+
+    def test_it_verifies_search_strategy_is_valid(self):
+        with self.assertRaises(TypeError) as context:
+            Planner(State(), [Operator()], EndState(), "invalid-search-strategy")
+
+        self.assertTrue('Not a valid SearchStrategy' in str(context.exception))
 
     def test_tiny_smoke_test(self):
         class AddN(PrimitiveOperator):
@@ -143,7 +164,7 @@ class PlannerTest(unittest.TestCase):
         end_state = EndState()
         end_state.counter = 5
 
-        planner = Planner(start_state, [AddN(1), AddN(2)], end_state)
+        planner = Planner(start_state, [AddN(1), AddN(2)], end_state, BreadthFirstSearchStrategy())
         graph = nx.DiGraph()
         result = planner.plan(graph)
         self.assertEqual(end_state, result.state)
@@ -158,7 +179,7 @@ class PlannerTest(unittest.TestCase):
 
             # For easier debugging
             def __str__(self):
-                contents = self.contents['actor']
+                contents = self.contents.actor
 
                 if self.has_visit_marker():
                     visit_str = self.get_visit_marker() + ': '
@@ -166,12 +187,14 @@ class PlannerTest(unittest.TestCase):
                     visit_str = ''
 
                 if len(contents) == 0:
-                    return visit_str + "in {location}".format(location=self.location['actor'])
+                    return visit_str + "in {location}".format(location=self.actor_location)
                 else:
                     return visit_str + "in {location} with {contents}".format(
-                        location=self.location['actor'],
-                        contents=', '.join(sorted(list(self.contents['actor'])))
+                        location=self.actor_location,
+                        contents=', '.join(sorted(list(self.contents.actor)))
                     )
+
+        contents_type = collections.namedtuple('ContentsInfo', ['actor', 'garage', 'kitchen', 'livingroom'])
 
         state = StateWithSuccinctPrint()
         state.connections = (
@@ -181,54 +204,52 @@ class PlannerTest(unittest.TestCase):
             ('kitchen', 'stairs'),
             ('garage', 'street'),
             ('street', 'park'))
-        state.contents = dict(
-            actor=[],
-            garage=['bicycle'],
-            kitchen=['spoon'],
-            livingroom=['frisbee']
-        )
-        state.location = dict(actor='bedroom')
+
+        state.contents = contents_type(actor=frozenset(), garage=frozenset(['bicycle']), kitchen=frozenset(['spoon']),
+                                       livingroom=frozenset(['frisbee']))
+        state.actor_location = 'bedroom'
 
         class GrabAvailableItem(PrimitiveOperator):
             def can_apply(self, state):
-                return state.location['actor'] in state.contents
+                contents_as_dict = state.contents._asdict()
+                return state.actor_location in contents_as_dict and len(contents_as_dict[state.actor_location]) > 0
 
             def apply(self, state):
-                actor_location = state.location['actor']
-                for item in state.contents[actor_location]:
+                for item in getattr(state.contents, state.actor_location):
                     new_state = state.copy()
-                    new_state.contents['actor'].append(item)
-                    new_state.contents[actor_location].pop(
-                        new_state.contents[actor_location].index(item)
-                    )
+
+                    replacements = dict()
+                    replacements['actor'] = new_state.contents.actor.union(frozenset([item]))
+                    replacements[new_state.actor_location] = getattr(new_state.contents, state.actor_location).difference(frozenset([item]))
+
+                    new_state.contents = new_state.contents._replace(**replacements)
+
                     yield new_state, "grab {item}".format(item=item)
 
         class WalkToNewLocation(PrimitiveOperator):
             def can_apply(self, state):
-                location = state.location['actor']
-
                 for location_edges in state.connections:
-                    if location in location_edges:
+                    if state.actor_location in location_edges:
                         return True
                 return False
 
             def apply(self, state):
-                location = state.location['actor']
                 for location_edges in state.connections:
-                    if location in location_edges:
-                        if location == location_edges[0]:
+                    if state.actor_location in location_edges:
+                        if state.actor_location == location_edges[0]:
                             new_location = location_edges[1]
                         else:
                             new_location = location_edges[0]
                         new_state = state.copy()
-                        new_state.location['actor'] = new_location
+                        new_state.actor_location = new_location
                         yield new_state, "walk to {new_location}".format(new_location=new_location)
 
         class InParkWithFrisbee(EndState):
             def __eq__(self, other):
-                return other.location['actor'] == 'park' and 'frisbee' in other.contents['actor']
+                return other.actor_location == 'park' and 'frisbee' in other.contents.actor
 
-        planner = Planner(state, [GrabAvailableItem(), WalkToNewLocation()], InParkWithFrisbee())
+        planner = Planner(state, [GrabAvailableItem(), WalkToNewLocation()], InParkWithFrisbee(),
+                          BreadthFirstSearchStrategy())
         graph = nx.DiGraph()
         result = planner.plan(graph)
         self.assertEqual(InParkWithFrisbee(), result.state)

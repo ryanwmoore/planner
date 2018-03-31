@@ -2,7 +2,10 @@ import copy
 import json
 import logging
 
+from collections import deque
+
 log = logging.getLogger(__name__)
+
 
 class State(object):
     def filter_control_fields(self, target=None):
@@ -12,8 +15,8 @@ class State(object):
             del target['__visitmarker']
         if '__isfrozen' in target:
             del target['__isfrozen']
-        if '__frozencontents' in target:
-            del target['__frozencontents']
+        if '__hash_value' in target:
+            del target['__hash_value']
         return target
 
     def __eq__(self, other):
@@ -23,7 +26,12 @@ class State(object):
 
     def __setattr__(self, key, value):
         if self.is_frozen() and key != '__visitmarker' and key != '__dict__':
-            raise AttributeError("Cannot set {key} to \"{value}\" on already frozen State {state}".format(key=key, value=value, state=str(self)))
+            raise AttributeError(
+                "Cannot set {key} to \"{value}\" on already frozen State {state}".format(key=key, value=value,
+                                                                                         state=str(self)))
+        if not self._is_hashable(value):
+            raise TypeError("Sorry! Only hashable types can be used. Common hashable types include tuples, strings, and frozensets. Field \"{field}\" is of type \"{type}\"".format(field=key, type=value.__class__.__name__))
+
         self.__dict__[key] = value
 
     def __repr__(self):
@@ -40,6 +48,15 @@ class State(object):
         except TypeError:
             return str(self.__dict__)
 
+    @staticmethod
+    def _is_hashable(obj):
+        try:
+            obj.__hash__()
+            return True
+        except TypeError:
+            return False
+
+
     def copy(self):
         the_copy = copy.deepcopy(self)
         the_copy.filter_control_fields(the_copy.__dict__)
@@ -48,7 +65,11 @@ class State(object):
     def freeze(self):
         if not self.is_frozen():
             contents_without_visit_marker = self.filter_control_fields()
-            setattr(self, '__frozencontents', str(self.__dict__))
+            # This is tricky. We want to calculate a hash value while ignoring fields that the user is allowed to later
+            # set without affecting equality/hashing.
+            # But, dictionaries cannot be hashed and their key-value order get rearranged depending on the order in
+            # which keys are inserted/deleted.
+            setattr(self, '__hash_value', tuple(sorted(contents_without_visit_marker.items())).__hash__())
             setattr(self, '__isfrozen', True)
 
     def is_frozen(self):
@@ -65,7 +86,8 @@ class State(object):
 
     def __hash__(self):
         self.freeze()
-        return getattr(self, '__frozencontents').__hash__()
+        return getattr(self, '__hash_value')
+
 
 class EndState(State):
     """There's two ways to use this class:
@@ -101,18 +123,18 @@ class SearchStrategy(object):
 
 class BreadthFirstSearchStrategy(SearchStrategy):
     def __init__(self):
-        self.queue = []
+        self.queue = deque()
 
     def addState(self, state):
         self.queue.append(state)
 
     def popNextState(self, state):
-        return self.queue.pop(0)
+        return self.queue.popleft()
 
 
 class DepthFirstSearchStrategy(SearchStrategy):
     def __init__(self):
-        self.stack = []
+        self.stack = deque()
 
     def addState(self, state):
         self.stack.append(state)
@@ -122,7 +144,7 @@ class DepthFirstSearchStrategy(SearchStrategy):
 
 
 class Planner(object):
-    def __init__(self, state, operators, endState, description=[]):
+    def __init__(self, state, operators, endState, searchStrategy, description=[]):
         if not isinstance(state, State):
             raise TypeError("Not a valid State: {state}".format(state=state))
         self.state = state
@@ -135,18 +157,26 @@ class Planner(object):
             raise TypeError("Not a valid EndState: {endState}".format(endState=endState))
         self.endState = endState
 
+        if not isinstance(searchStrategy, SearchStrategy):
+            raise TypeError("Not a valid SearchStrategy: {searchStrategy}".format(searchStrategy=searchStrategy))
+        self.searchStrategy = searchStrategy
+
         self.description = description
+        self.steps = 0
 
     def __str__(self):
-        return "Planner({state}, {operators}, {endState})".format(state=str(self.state), operators=self.operators,
-                                                                  endState=self.endState)
+        return "Planner({state}, {operators}, {endState}, {searchStrategy})".format(state=str(self.state),
+                                                                                    operators=self.operators,
+                                                                                    endState=self.endState,
+                                                                                    searchStrategy=str(
+                                                                                        self.searchStrategy))
 
     def __repr__(self):
         return str(self)
 
     def _apply(self, queue, description):
         for s, description in self._makeNextStates():
-            yield Planner(s, self.operators, self.endState, self.description + [description])
+            yield Planner(s, self.operators, self.endState, self.searchStrategy, self.description + [description])
 
     def _makeNextStates(self):
         for operator in self.operators:
@@ -172,24 +202,24 @@ class Planner(object):
                     q.state.set_visit_marker("Step {steps}".format(steps=self.steps))
                     seen_states.add(q.state)
 
-
-                if graph is not None:
-                    graph.add_node(q.state)
-
-                if self.endState == q.state:
-                    return q
-
-                for new_planner in q._apply(newQueueStates, self.description):
-                    newQueueStates.append(new_planner)
                     if graph is not None:
-                        action = new_planner.description[-1]
-                        graph.add_edge(q.state, new_planner.state, label=action)
+                        graph.add_node(q.state)
+
+                    if self.endState == q.state:
+                        return q
+
+                    for new_planner in q._apply(newQueueStates, self.description):
+                        newQueueStates.append(new_planner)
+                        if graph is not None:
+                            action = new_planner.description[-1]
+                            graph.add_edge(q.state, new_planner.state, label=action)
 
             queue.clear()
             for q in newQueueStates:
                 queue.append(q)
 
         return None
+
 
 class Helpers(object):
     @staticmethod
