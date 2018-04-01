@@ -95,7 +95,7 @@ class State(object):
 class EndState(State):
     """There's two ways to use this class:
 
-    1. Set fields manually. Any state must be exactly equal to this one in order to stop the planning process.
+    1. Set fields manually. Any state must equal this one in order to stop the planning process.
     2. Override __eq__: This let's the end state have dynamic/complex behavior
     """
 
@@ -181,7 +181,7 @@ class Planner(object):
     def __repr__(self):
         return str(self)
 
-    def _apply(self, queue, description):
+    def _apply(self):
         for s, description in self._makeNextStates():
             yield Planner(s, self.operators, self.end_state, self.search_strategy, self.description + [description])
 
@@ -201,7 +201,7 @@ class Planner(object):
         graph.add_node(self.state)
 
         while len(queue):
-            newQueueStates = []
+            new_queue = []
 
             for q in queue:
                 if q.state not in seen_states:
@@ -216,15 +216,14 @@ class Planner(object):
                     if self.end_state == q.state:
                         return q
 
-                    for new_planner in q._apply(newQueueStates, self.description):
-                        newQueueStates.append(new_planner)
+                    for new_planner in q._apply():
+                        new_queue.append(new_planner)
                         if graph is not None:
                             action = new_planner.description[-1]
                             graph.add_edge(
                                 q.state, new_planner.state, label=action)
 
-            queue.clear()
-            queue.extend(newQueueStates)
+            queue = new_queue
 
         return None
 
