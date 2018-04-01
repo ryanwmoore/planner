@@ -30,8 +30,9 @@ class State(object):
                 "Cannot set {key} to \"{value}\" on already frozen State {state}".format(key=key, value=value,
                                                                                          state=str(self)))
         if not self._is_hashable(value):
-            raise TypeError("Sorry! Only hashable types can be used. Common hashable types include tuples, strings, and frozensets. Field \"{field}\" is of type \"{type}\"".format(
-                field=key, type=value.__class__.__name__))
+            raise TypeError(
+                "Sorry! Only hashable types can be used. Common hashable types include tuples, strings, and frozensets. Field \"{field}\" is of type \"{type}\"".format(
+                    field=key, type=value.__class__.__name__))
 
         self.__dict__[key] = value
 
@@ -116,11 +117,11 @@ class CompoundOperator(Operator):
 
 
 class SearchStrategy(object):
-    def addState(self, state):
+    def add_state(self, state):
         raise NotImplementedError(
             "this is an abstract base class: Use one of the classes that inherit from this one")
 
-    def popNextState(self, state):
+    def pop_next_state(self, state):
         raise NotImplementedError(
             "this is an abstract base class: Use one of the classes that inherit from this one")
 
@@ -129,10 +130,10 @@ class BreadthFirstSearchStrategy(SearchStrategy):
     def __init__(self):
         self.queue = deque()
 
-    def addState(self, state):
+    def add_state(self, state):
         self.queue.append(state)
 
-    def popNextState(self, state):
+    def pop_next_state(self, state):
         return self.queue.popleft()
 
 
@@ -140,15 +141,15 @@ class DepthFirstSearchStrategy(SearchStrategy):
     def __init__(self):
         self.stack = deque()
 
-    def addState(self, state):
+    def add_state(self, state):
         self.stack.append(state)
 
-    def popNextState(self, state):
+    def pop_next_state(self, state):
         return self.stack.pop()
 
 
 class Planner(object):
-    def __init__(self, state, operators, endState, searchStrategy, description=[]):
+    def __init__(self, state, operators, end_state, search_strategy, description=[]):
         if not isinstance(state, State):
             raise TypeError("Not a valid State: {state}".format(state=state))
         self.state = state
@@ -158,32 +159,31 @@ class Planner(object):
                 "Not all Operators are valid: {operators}".format(operators=operators))
         self.operators = list(operators)
 
-        if not isinstance(endState, EndState):
+        if not isinstance(end_state, EndState):
             raise TypeError(
-                "Not a valid EndState: {endState}".format(endState=endState))
-        self.endState = endState
+                "Not a valid EndState: {endState}".format(endState=end_state))
+        self.end_state = end_state
 
-        if not isinstance(searchStrategy, SearchStrategy):
-            raise TypeError("Not a valid SearchStrategy: {searchStrategy}".format(
-                searchStrategy=searchStrategy))
-        self.searchStrategy = searchStrategy
+        if not isinstance(search_strategy, SearchStrategy):
+            raise TypeError("Not a valid SearchStrategy: {search_strategy}".format(
+                search_strategy=search_strategy))
+        self.search_strategy = search_strategy
 
         self.description = description
         self.steps = 0
 
     def __str__(self):
-        return "Planner({state}, {operators}, {endState}, {searchStrategy})".format(state=str(self.state),
-                                                                                    operators=self.operators,
-                                                                                    endState=self.endState,
-                                                                                    searchStrategy=str(
-                                                                                        self.searchStrategy))
+        return "Planner({state}, {operators}, {end_state}, {search_strategy})".format(state=str(self.state),
+                                                                                      operators=self.operators,
+                                                                                      end_state=self.end_state,
+                                                                                      search_strategy=self.search_strategy)
 
     def __repr__(self):
         return str(self)
 
     def _apply(self, queue, description):
         for s, description in self._makeNextStates():
-            yield Planner(s, self.operators, self.endState, self.searchStrategy, self.description + [description])
+            yield Planner(s, self.operators, self.end_state, self.search_strategy, self.description + [description])
 
     def _makeNextStates(self):
         for operator in self.operators:
@@ -213,7 +213,7 @@ class Planner(object):
                     if graph is not None:
                         graph.add_node(q.state)
 
-                    if self.endState == q.state:
+                    if self.end_state == q.state:
                         return q
 
                     for new_planner in q._apply(newQueueStates, self.description):
@@ -224,8 +224,7 @@ class Planner(object):
                                 q.state, new_planner.state, label=action)
 
             queue.clear()
-            for q in newQueueStates:
-                queue.append(q)
+            queue.extend(newQueueStates)
 
         return None
 

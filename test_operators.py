@@ -92,23 +92,23 @@ class StateTests(unittest.TestCase):
 class BreadthFirstSearchStrategyTests(unittest.TestCase):
     def smoke_test(self):
         suj = BreadthFirstSearchStrategy()
-        suj.addState(1)
-        suj.addState(2)
-        suj.addState(3)
-        self.assertEqual(1, suj.popNextState())
-        self.assertEqual(2, suj.popNextState())
-        self.assertEqual(3, suj.popNextState())
+        suj.add_state(1)
+        suj.add_state(2)
+        suj.add_state(3)
+        self.assertEqual(1, suj.pop_next_state())
+        self.assertEqual(2, suj.pop_next_state())
+        self.assertEqual(3, suj.pop_next_state())
 
 
 class DepthFirstSearchStrategyTests(unittest.TestCase):
     def smoke_test(self):
         suj = DepthFirstSearchStrategy()
-        suj.addState(1)
-        suj.addState(2)
-        suj.addState(3)
-        self.assertEqual(3, suj.popNextState())
-        self.assertEqual(2, suj.popNextState())
-        self.assertEqual(1, suj.popNextState())
+        suj.add_state(1)
+        suj.add_state(2)
+        suj.add_state(3)
+        self.assertEqual(3, suj.pop_next_state())
+        self.assertEqual(2, suj.pop_next_state())
+        self.assertEqual(1, suj.pop_next_state())
 
 
 class OperatorTests(unittest.TestCase):
@@ -168,14 +168,16 @@ class PlannerTest(unittest.TestCase):
         end_state = EndState()
         end_state.counter = 5
 
-        planner = Planner(start_state, [AddN(1), AddN(
+        suj = Planner(start_state, [AddN(1), AddN(
             2)], end_state, BreadthFirstSearchStrategy())
+
+        self.assertNotEqual(str(suj), "")
         graph = nx.DiGraph()
-        result = planner.plan(graph)
+        result = suj.plan(graph)
         self.assertEqual(end_state, result.state)
         self.assertEqual(result.description, ['add 1', 'add 2', 'add 2'])
         Helpers.write_dot(graph, "minigraph.dot")
-        self.assertEqual(planner.steps, 6)
+        self.assertEqual(suj.steps, 6)
 
     def test_go_to_park_with_frisbee(self):
         class StateWithSuccinctPrint(State):
@@ -257,14 +259,15 @@ class PlannerTest(unittest.TestCase):
             def __eq__(self, other):
                 return other.actor_location == 'park' and 'frisbee' in other.contents.actor
 
-        planner = Planner(state, [GrabAvailableItem(), WalkToNewLocation()], InParkWithFrisbee(),
-                          BreadthFirstSearchStrategy())
+        suj = Planner(state, [GrabAvailableItem(), WalkToNewLocation()], InParkWithFrisbee(),
+                      BreadthFirstSearchStrategy())
         graph = nx.DiGraph()
-        result = planner.plan(graph)
+        result = suj.plan(graph)
         self.assertEqual(InParkWithFrisbee(), result.state)
-        self.assertEqual(planner.steps, 36)
-        self.assertEqual(result.description,  ['walk to stairs', 'walk to livingroom',
-                                               'grab frisbee', 'walk to stairs', 'walk to garage', 'walk to street', 'walk to park'])
+        self.assertEqual(suj.steps, 36)
+        self.assertEqual(result.description, ['walk to stairs', 'walk to livingroom',
+                                              'grab frisbee', 'walk to stairs', 'walk to garage', 'walk to street',
+                                              'walk to park'])
         Helpers.write_dot(graph, "graph.dot")
 
 
