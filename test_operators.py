@@ -35,7 +35,8 @@ class StateTests(unittest.TestCase):
         with self.assertRaises(AttributeError):
             suj.field = 'value'
         suj.set_visit_marker('this value can be set after freezing')
-        self.assertEqual(suj.get_visit_marker(), 'this value can be set after freezing')
+        self.assertEqual(suj.get_visit_marker(),
+                         'this value can be set after freezing')
         post_seg_visit_marker_hash = suj.__hash__()
 
         self.assertEqual(original_hash, post_seg_visit_marker_hash)
@@ -131,17 +132,20 @@ class PlannerTest(unittest.TestCase):
         with self.assertRaises(TypeError) as context:
             Planner(State(), ["foo"], EndState(), BreadthFirstSearchStrategy())
 
-        self.assertTrue('Not all Operators are valid' in str(context.exception), str(context.exception))
+        self.assertTrue('Not all Operators are valid' in str(
+            context.exception), str(context.exception))
 
     def test_it_verifies_endstate_is_valid(self):
         with self.assertRaises(TypeError) as context:
-            Planner(State(), [Operator()], "invalid-end-state", BreadthFirstSearchStrategy())
+            Planner(State(), [Operator()], "invalid-end-state",
+                    BreadthFirstSearchStrategy())
 
         self.assertTrue('Not a valid EndState' in str(context.exception))
 
     def test_it_verifies_search_strategy_is_valid(self):
         with self.assertRaises(TypeError) as context:
-            Planner(State(), [Operator()], EndState(), "invalid-search-strategy")
+            Planner(State(), [Operator()], EndState(),
+                    "invalid-search-strategy")
 
         self.assertTrue('Not a valid SearchStrategy' in str(context.exception))
 
@@ -164,13 +168,14 @@ class PlannerTest(unittest.TestCase):
         end_state = EndState()
         end_state.counter = 5
 
-        planner = Planner(start_state, [AddN(1), AddN(2)], end_state, BreadthFirstSearchStrategy())
+        planner = Planner(start_state, [AddN(1), AddN(
+            2)], end_state, BreadthFirstSearchStrategy())
         graph = nx.DiGraph()
         result = planner.plan(graph)
         self.assertEqual(end_state, result.state)
-        print("It took", planner.steps, "steps to reach", result.state)
-        print("The path was: ", result.description)
+        self.assertEqual(result.description, ['add 1', 'add 2', 'add 2'])
         Helpers.write_dot(graph, "minigraph.dot")
+        self.assertEqual(planner.steps, 6)
 
     def test_go_to_park_with_frisbee(self):
         class StateWithSuccinctPrint(State):
@@ -194,7 +199,8 @@ class PlannerTest(unittest.TestCase):
                         contents=', '.join(sorted(list(self.contents.actor)))
                     )
 
-        contents_type = collections.namedtuple('ContentsInfo', ['actor', 'garage', 'kitchen', 'livingroom'])
+        contents_type = collections.namedtuple(
+            'ContentsInfo', ['actor', 'garage', 'kitchen', 'livingroom'])
 
         state = StateWithSuccinctPrint()
         state.connections = (
@@ -219,10 +225,13 @@ class PlannerTest(unittest.TestCase):
                     new_state = state.copy()
 
                     replacements = dict()
-                    replacements['actor'] = new_state.contents.actor.union(frozenset([item]))
-                    replacements[new_state.actor_location] = getattr(new_state.contents, state.actor_location).difference(frozenset([item]))
+                    replacements['actor'] = new_state.contents.actor.union(
+                        frozenset([item]))
+                    replacements[new_state.actor_location] = getattr(
+                        new_state.contents, state.actor_location).difference(frozenset([item]))
 
-                    new_state.contents = new_state.contents._replace(**replacements)
+                    new_state.contents = new_state.contents._replace(
+                        **replacements)
 
                     yield new_state, "grab {item}".format(item=item)
 
@@ -253,8 +262,9 @@ class PlannerTest(unittest.TestCase):
         graph = nx.DiGraph()
         result = planner.plan(graph)
         self.assertEqual(InParkWithFrisbee(), result.state)
-        print("It took", planner.steps, "steps to reach", result.state)
-        print("The path was: ", result.description)
+        self.assertEqual(planner.steps, 36)
+        self.assertEqual(result.description,  ['walk to stairs', 'walk to livingroom',
+                                               'grab frisbee', 'walk to stairs', 'walk to garage', 'walk to street', 'walk to park'])
         Helpers.write_dot(graph, "graph.dot")
 
 

@@ -30,7 +30,8 @@ class State(object):
                 "Cannot set {key} to \"{value}\" on already frozen State {state}".format(key=key, value=value,
                                                                                          state=str(self)))
         if not self._is_hashable(value):
-            raise TypeError("Sorry! Only hashable types can be used. Common hashable types include tuples, strings, and frozensets. Field \"{field}\" is of type \"{type}\"".format(field=key, type=value.__class__.__name__))
+            raise TypeError("Sorry! Only hashable types can be used. Common hashable types include tuples, strings, and frozensets. Field \"{field}\" is of type \"{type}\"".format(
+                field=key, type=value.__class__.__name__))
 
         self.__dict__[key] = value
 
@@ -39,7 +40,8 @@ class State(object):
 
     def __str__(self):
         try:
-            result = str(json.dumps(self.filter_control_fields(), sort_keys=True))
+            result = str(json.dumps(
+                self.filter_control_fields(), sort_keys=True))
             if self.has_visit_marker():
                 return "{marker}: {result}".format(marker=self.get_visit_marker(), result=result)
             else:
@@ -56,7 +58,6 @@ class State(object):
         except TypeError:
             return False
 
-
     def copy(self):
         the_copy = copy.deepcopy(self)
         the_copy.filter_control_fields(the_copy.__dict__)
@@ -69,7 +70,8 @@ class State(object):
             # set without affecting equality/hashing.
             # But, dictionaries cannot be hashed and their key-value order get rearranged depending on the order in
             # which keys are inserted/deleted.
-            setattr(self, '__hash_value', tuple(sorted(contents_without_visit_marker.items())).__hash__())
+            setattr(self, '__hash_value', tuple(
+                sorted(contents_without_visit_marker.items())).__hash__())
             setattr(self, '__isfrozen', True)
 
     def is_frozen(self):
@@ -115,10 +117,12 @@ class CompoundOperator(Operator):
 
 class SearchStrategy(object):
     def addState(self, state):
-        raise NotImplementedError("this is an abstract base class: Use one of the classes that inherit from this one")
+        raise NotImplementedError(
+            "this is an abstract base class: Use one of the classes that inherit from this one")
 
     def popNextState(self, state):
-        raise NotImplementedError("this is an abstract base class: Use one of the classes that inherit from this one")
+        raise NotImplementedError(
+            "this is an abstract base class: Use one of the classes that inherit from this one")
 
 
 class BreadthFirstSearchStrategy(SearchStrategy):
@@ -150,15 +154,18 @@ class Planner(object):
         self.state = state
 
         if not all(isinstance(o, Operator) for o in operators):
-            raise TypeError("Not all Operators are valid: {operators}".format(operators=operators))
+            raise TypeError(
+                "Not all Operators are valid: {operators}".format(operators=operators))
         self.operators = list(operators)
 
         if not isinstance(endState, EndState):
-            raise TypeError("Not a valid EndState: {endState}".format(endState=endState))
+            raise TypeError(
+                "Not a valid EndState: {endState}".format(endState=endState))
         self.endState = endState
 
         if not isinstance(searchStrategy, SearchStrategy):
-            raise TypeError("Not a valid SearchStrategy: {searchStrategy}".format(searchStrategy=searchStrategy))
+            raise TypeError("Not a valid SearchStrategy: {searchStrategy}".format(
+                searchStrategy=searchStrategy))
         self.searchStrategy = searchStrategy
 
         self.description = description
@@ -199,7 +206,8 @@ class Planner(object):
             for q in queue:
                 if q.state not in seen_states:
                     self.steps = self.steps + 1
-                    q.state.set_visit_marker("Step {steps}".format(steps=self.steps))
+                    q.state.set_visit_marker(
+                        "Step {steps}".format(steps=self.steps))
                     seen_states.add(q.state)
 
                     if graph is not None:
@@ -212,7 +220,8 @@ class Planner(object):
                         newQueueStates.append(new_planner)
                         if graph is not None:
                             action = new_planner.description[-1]
-                            graph.add_edge(q.state, new_planner.state, label=action)
+                            graph.add_edge(
+                                q.state, new_planner.state, label=action)
 
             queue.clear()
             for q in newQueueStates:
@@ -227,7 +236,10 @@ class Helpers(object):
         import networkx
         relabel_assignments = {}
         for node in graph.nodes():
-            relabel_assignments[node] = '"{label}"'.format(label=str(node).replace('"', '\\"'))
-            log.debug("{before} becomes {after}".format(before=node, after=relabel_assignments[node]))
-        copied_graph = networkx.relabel_nodes(graph, relabel_assignments, copy=True)
+            relabel_assignments[node] = '"{label}"'.format(
+                label=str(node).replace('"', '\\"'))
+            log.debug("{before} becomes {after}".format(
+                before=node, after=relabel_assignments[node]))
+        copied_graph = networkx.relabel_nodes(
+            graph, relabel_assignments, copy=True)
         networkx.drawing.nx_pydot.write_dot(copied_graph, output)
