@@ -75,6 +75,12 @@ class StateTests(unittest.TestCase):
         s0.attribute = 123
         self.assertEqual(str(s0), "{\"attribute\": 123}")
 
+    def test_prefix_with_visit_marker(self):
+        suj = State()
+        self.assertEqual(suj.prefix_with_visit_marker("FOO"), "FOO")
+        suj.set_visit_marker("PREFIX")
+        self.assertEqual(suj.prefix_with_visit_marker("FOO"), "PREFIX: FOO")
+
     def test_visit_marker(self):
         suj = State()
         suj.attribute = 'some-value'
@@ -124,13 +130,13 @@ class OperatorTests(unittest.TestCase):
 class PlannerTest(unittest.TestCase):
     def test_it_verifies_state_is_valid(self):
         with self.assertRaises(TypeError) as context:
-            Planner("foo", [], EndState(), BreadthFirstSearchStrategy())
+            Planner("foo", [], State(), BreadthFirstSearchStrategy())
 
         self.assertTrue('Not a valid State' in str(context.exception))
 
     def test_it_verifies_operators_are_valid(self):
         with self.assertRaises(TypeError) as context:
-            Planner(State(), ["foo"], EndState(), BreadthFirstSearchStrategy())
+            Planner(State(), ["foo"], State(), BreadthFirstSearchStrategy())
 
         self.assertTrue('Not all Operators are valid' in str(
             context.exception), str(context.exception))
@@ -140,11 +146,11 @@ class PlannerTest(unittest.TestCase):
             Planner(State(), [Operator()], "invalid-end-state",
                     BreadthFirstSearchStrategy())
 
-        self.assertTrue('Not a valid EndState' in str(context.exception))
+        self.assertTrue('Not a valid State' in str(context.exception))
 
     def test_it_verifies_search_strategy_is_valid(self):
         with self.assertRaises(TypeError) as context:
-            Planner(State(), [Operator()], EndState(),
+            Planner(State(), [Operator()], State(),
                     "invalid-search-strategy")
 
         self.assertTrue('Not a valid SearchStrategy' in str(context.exception))
@@ -165,7 +171,7 @@ class PlannerTest(unittest.TestCase):
         start_state = State()
         start_state.counter = 0
 
-        end_state = EndState()
+        end_state = State()
         end_state.counter = 5
 
         suj = Planner(start_state, [AddN(1), AddN(
@@ -255,7 +261,7 @@ class PlannerTest(unittest.TestCase):
                         new_state.actor_location = new_location
                         yield new_state, "walk to {new_location}".format(new_location=new_location)
 
-        class InParkWithFrisbee(EndState):
+        class InParkWithFrisbee(State):
             def __eq__(self, other):
                 return other.actor_location == 'park' and 'frisbee' in other.contents.actor
 

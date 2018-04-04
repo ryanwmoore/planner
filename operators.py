@@ -19,6 +19,12 @@ class State(object):
             del target['__hash_value']
         return target
 
+    def prefix_with_visit_marker(self, string):
+        if self.has_visit_marker():
+            return "{prefix}: {string}".format(prefix=self.get_visit_marker(), string=string)
+        else:
+            return string
+
     def __eq__(self, other):
         if isinstance(other, State):
             return self.filter_control_fields() == other.filter_control_fields()
@@ -92,14 +98,6 @@ class State(object):
         return getattr(self, '__hash_value')
 
 
-class EndState(State):
-    """There's two ways to use this class:
-
-    1. Set fields manually. Any state must equal this one in order to stop the planning process.
-    2. Override __eq__: This let's the end state have dynamic/complex behavior
-    """
-
-
 class Operator(object):
     def can_apply(self, state):
         raise NotImplementedError()
@@ -159,9 +157,9 @@ class Planner(object):
                 "Not all Operators are valid: {operators}".format(operators=operators))
         self.operators = list(operators)
 
-        if not isinstance(end_state, EndState):
+        if not isinstance(end_state, State):
             raise TypeError(
-                "Not a valid EndState: {endState}".format(endState=end_state))
+                "Not a valid State: {endState}".format(endState=end_state))
         self.end_state = end_state
 
         if not isinstance(search_strategy, SearchStrategy):
@@ -208,6 +206,7 @@ class Planner(object):
                     self.steps = self.steps + 1
                     q.state.set_visit_marker(
                         "Step {steps}".format(steps=self.steps))
+                    print("Added: {state}".format(state=q.state))
                     seen_states.add(q.state)
 
                     if graph is not None:
