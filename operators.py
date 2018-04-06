@@ -196,7 +196,6 @@ class Planner(object):
         self.steps = 0
         queue = [self]
         seen_states = set()
-        graph.add_node(self.state)
 
         while len(queue):
             new_queue = []
@@ -204,23 +203,41 @@ class Planner(object):
             for q in queue:
                 if q.state not in seen_states:
                     self.steps = self.steps + 1
-                    q.state.set_visit_marker(
-                        "Step {steps}".format(steps=self.steps))
+                    q.state.set_visit_marker(str(self.steps))
                     print("Added: {state}".format(state=q.state))
-                    seen_states.add(q.state)
 
                     if graph is not None:
-                        graph.add_node(q.state)
+                        node_attributes = {}
+                        if len(seen_states) == 1:
+                            node_attributes['fillcolor'] = 'yellow'
+                            node_attributes['shape'] = 'rectangle'
+                            node_attributes['style'] = 'filled'
+                        elif self.end_state == q.state:
+                            node_attributes['fillcolor'] = 'green'
+                            node_attributes['shape'] = 'rectangle'
+                            node_attributes['style'] = 'filled'
+                        else:
+                            node_attributes['fillcolor'] = 'gray'
+                            node_attributes['style'] = 'filled'
 
-                    if self.end_state == q.state:
-                        return q
+                        graph.add_node(q.state, **node_attributes)
 
+
+            end_result = None
+            for q in queue:
+                if q.state not in seen_states:
+                    if end_result is None and self.end_state == q.state:
+                        end_result = q
+                    seen_states.add(q.state)
                     for new_planner in q._apply():
                         new_queue.append(new_planner)
                         if graph is not None:
                             action = new_planner.description[-1]
                             graph.add_edge(
                                 q.state, new_planner.state, label=action)
+
+            if end_result:
+                return end_result
 
             queue = new_queue
 
