@@ -1,2 +1,5 @@
 *.dot
 *.pdf
+.idea
+__pycache__/
+venv/
