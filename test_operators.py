@@ -183,7 +183,7 @@ class PlannerTest(unittest.TestCase):
         self.assertEqual(end_state, result.state)
         self.assertEqual(result.description, ['add 1', 'add 2', 'add 2'])
         Helpers.write_dot(graph, "minigraph.dot")
-        self.assertEqual(suj.steps, 6)
+        self.assertEqual(suj.steps, 9)
 
     def test_go_to_park_with_frisbee(self):
         class StateWithSuccinctPrint(State):
@@ -270,7 +270,7 @@ class PlannerTest(unittest.TestCase):
         graph = nx.DiGraph()
         result = suj.plan(graph)
         self.assertEqual(InParkWithFrisbee(), result.state)
-        self.assertEqual(suj.steps, 36)
+        self.assertEqual(suj.steps, 42)
         self.assertEqual(result.description, ['walk to stairs', 'walk to livingroom',
                                               'grab frisbee', 'walk to stairs', 'walk to garage', 'walk to street',
                                               'walk to park'])
