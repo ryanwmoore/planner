@@ -1,6 +1,6 @@
 from collections import namedtuple
 from enum import Enum
-from ..operators import *
+from operators import *
 
 import networkx as nx
 
