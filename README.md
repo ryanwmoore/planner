@@ -24,4 +24,4 @@ Solved it in 52 steps: ['pickup Goose', 'boat to the right shore', 'drop Goose',
 $ make fox_beans_goose.png
 ```
 
-![Fox Beans Goose state graph](fox_beans_goose.png?raw=true "Fox Beans Goose state graph")
+![Fox Beans Goose state graph](fox-beans-goose.png?raw=true "Fox Beans Goose state graph")
