@@ -25,3 +25,15 @@ $ make fox_beans_goose.png
 ```
 
 ![Fox Beans Goose state graph](fox-beans-goose.png?raw=true "Fox Beans Goose state graph")
+
+## Things that I'd like to Improve
+
+1. A\* graph search + heuristics
+2. Graph statistics (e.g., number of nodes explored, times a node was
+   revisited)
+3. A cleaner State implementation. To know whether a state is visited more than
+   once, it's necessary to keep a set of previously visited states. Therefore,
+   those old state objects must be immutable once they're put into the visited
+   set. The implementation is a bit awkward, though the test coverage is good
+   enough.
+4. Educational tools. E.g., compare BFS vs DFS, compare A\* heuristics
