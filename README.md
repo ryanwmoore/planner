@@ -9,7 +9,7 @@ graphs.
 
 ## Examples
 
-A version of the [https://en.wikipedia.org/wiki/Fox,_goose_and_bag_of_beans_puzzle](Fox, Goose, and Bag of Beans Puzzle) is included.
+A version of the [Fox, Goose, and Bag of Beans Puzzle](https://en.wikipedia.org/wiki/Fox,_goose_and_bag_of_beans_puzzle) is included.
 
 ```
 $ python --version
