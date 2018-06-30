@@ -208,7 +208,7 @@ class Planner(object):
 
                     if graph is not None:
                         node_attributes = {}
-                        if len(seen_states) == 1:
+                        if len(seen_states) == 0:
                             node_attributes['fillcolor'] = 'yellow'
                             node_attributes['shape'] = 'rectangle'
                             node_attributes['style'] = 'filled'
